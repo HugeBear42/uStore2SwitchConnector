@@ -1,6 +1,6 @@
 <?php
 /**
-	A utility class that generates a delivery
+	A utility class that generates a delivery using the uStore SOAP API. All methods can throw an exception !
 	2021-11-12	Genesis!
 	2024-11-07	Refactored class
 	
@@ -9,54 +9,45 @@ namespace App\utils;
 
 class WS_XMP_ActualDelivery
 {
+	private object $deliveryWS;
+	
 	function __construct(private array $cfgArray)
-	{}
-
-	public function createDeliveryByOrderProducts(array $orderProductIdsArray, $deliveryDateTime, $trackingNumber="")//, $deliveryPrice=0, $deliveryServiceID)	// throws Exception!
 	{
-		//try
-		//{
-		$delivery = new \SoapClient($this->cfgArray['deliveryWSDL']);
-		
+		$url=$cfgArray['baseURL'].str_ends_with($cfgArray['baseURL'], '/') ? '' : '/'; 
+		$deliveryWS = new SoapClient($url.'uStoreWSAPI/ActualDeliveryWS.asmx?WSDL', array('trace'   => true, 'exceptions'=> true);
+	}
+
+	private function createParamsStub() : object
+	{
 		$params=new \stdClass;	
-		$params->username = $this->cfgArray['apiUser'];	// uStore API user name 
-		$params->password = $this->cfgArray['apiPass'];	// password
-		$params->orderProductIds = $orderProductIdsArray;	// 
-		$params->deliveryDatetime = $deliveryDateTime;		//
-		$params->trackingNumber =$trackingNumber;			//
-		//$params->deliveryPrice =$deliveryPrice;				//
-		//$params->deliveryServiceID=$deliveryServiceID;		//
-
-		return  $delivery->CreateDeliveryByOrderProducts($params)->CreateDeliveryByOrderProductsResult;
-
-		//}
-		//catch(Exception $e)
-		//{
-		//	Logger::error("createDeliveryByOrderProducts() threw an exception, orderProductIds: ".print_r($orderProductIdsArray, true).", deliveryDateTime: $deliveryDateTime, trackingNumber: $trackingNumber, exception: ". $e->getMessage());
-		//	return false;
-		//}
+		$params->username = $this->cfgArray['apiUser'];		// uStore API user name 
+		$params->password = $this->cfgArray['apiPass'];		// password
+		return $params;
 	}
-/**
-	public function ManualDeliveryArrived($deliveryId)
+	public function createDeliveryByOrderProducts(array $orderProductIdsArray, string $deliveryDateTime, string $trackingNumber='', float $deliveryPrice=0.0, int $deliveryServiceID) : int
 	{
-		//try
-		//{
-			$delivery = new SoapClient($this->cfg->getActualDeliveryWSDL());
-		
-			$params=$this->cfg->getParamsStubObj();		// obj with userId & password filled-in
-			$params->deliveryId = $deliveryId;			// 
-
-			$result= $delivery->ManualDeliveryArrived($params);
-			//echo print_r($result, true);
-			return true;
-		//}
-		//catch(Exception $e)
-		//{
-		//	Logger::error("ManualDeliveryArrived() threw an exception, deliveryId: $deliveryId, exception: ". $e->getMessage());
-		//	return false;
-		//}
+		$params=$this->createParamsStub();
+		$params->orderProductIds = $orderProductIdsArray;
+		$params->deliveryDatetime = $deliveryDateTime;
+		$params->trackingNumber =$trackingNumber;
+		$params->deliveryPrice =$deliveryPrice;
+		$params->deliveryServiceID=$deliveryServiceID;
+		return  $this->deliveryWS->CreateDeliveryByOrderProducts($params)->CreateDeliveryByOrderProductsResult;
 	}
-**/
 
+	public function manualDeliveryArrived(int $deliveryId) : void
+	{
+		$params=$this->createParamsStub();
+		$params->deliveryId = $deliveryId;
+		$this->deliveryWS->ManualDeliveryArrived($params);
+	}
+	
+	public function getActualDelivery(int $actualDeliveryId) : object
+	{
+		$params=$this->createParamsStub();
+		$params->actualDeliveryId = $actualDeliveryId;
+		return $this->deliveryWS->GetActualDelivery($params);
+	}
+	
 }
-?>
+

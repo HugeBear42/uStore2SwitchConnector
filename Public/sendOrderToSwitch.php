@@ -31,11 +31,20 @@ $xmlContents=file_get_contents($configArray['switch']['sampleFile']);	// Use the
 
 if(array_key_exists('SERVER_PROTOCOL', $_SERVER))	// This is an online request & not CLI
 {
-	$xmlContents=file_get_contents("php://input");
-	if( stripos($_SERVER["CONTENT_TYPE"], "utf-8") >0 && stripos($xmlContents, '<?xml version="1.0" encoding="utf-16"?>')==0 )	// payload encoded as utf-8 but file will be parsed as utf-16, conversion needed!
+	if ($_SERVER['REQUEST_METHOD'] === 'POST')
 	{
-		Logger::info("Reencoding XML payload from UTF-8 to UTF-16!");
-		$xmlContents = iconv("UTF-8", "UTF-16", $xmlContents );
+		$xmlContents=file_get_contents("php://input");
+		if( stripos($_SERVER["CONTENT_TYPE"], "utf-8") >0 && stripos($xmlContents, '<?xml version="1.0" encoding="utf-16"?>')==0 )	// payload encoded as utf-8 but file will be parsed as utf-16, conversion needed!
+		{
+			Logger::info("Reencoding XML payload from UTF-8 to UTF-16!");
+			$xmlContents = iconv("UTF-8", "UTF-16", $xmlContents );
+		}
+	}
+	else
+	{
+		Logger::error("This page was accessed in error, request method be POST but got ".$_SERVER['REQUEST_METHOD']);
+		http_response_code(405);
+		exit;
 	}
 }
 
@@ -54,7 +63,7 @@ try
 {
 	$xmldata = simplexml_load_file($tmpFile);
 	$converter=new OrderXML2JSON();
-	$arrayData=$converter->convert($xmldata, $configArray['switch'], true);	// Return an array so we can extract the data to presist in the DB!
+	$arrayData=$converter->convert($xmldata, $configArray['uStore'], true);	// Return an array so we can extract the data to presist in the DB!
 
 	$wrapper=new OrderWrapper($arrayData, $tmpDir);
 	if($debug)	// Allows multiple submissions of the same file for testing, otherwise an exception is thrown as the orderId is the primary key!
@@ -74,7 +83,7 @@ try
 		Logger::info("Deleted temporary file {$tmpFile}");
 	}	
 	
-	if($configArray['switch']['dataTransfer']!='pushToSwitch')	// Switch will pull the files from the DB, all done for us
+	if(strtolower($configArray['switch']['dataTransfer']) !== 'pushtoswitch')	// Switch will pull the files from the DB, all done for us
 	{
 		Logger::info("------------------------------ Order {$wrapper->getOrderId()} placed in the Switch download queue ------------------------------");
 		exit;

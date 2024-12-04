@@ -103,8 +103,6 @@ class OrderXML2JSON
 			{
 				if( empty($value) )
 				{	$value="";
-				//$array[$key]='xxx';
-			//	error_log("found empty value for key {$key} in array ".print_r($array, true));
 				}
 				else
 				{	$value=$this->filterArray($value);}
@@ -114,7 +112,7 @@ class OrderXML2JSON
 		return $array;
 	}
 	
-	function convert(object $xml, array $configArray = [], bool $returnAsArray=false) : string|array
+	function convert(object $xml, array $uStoreConfigArray = [], bool $returnAsArray=false) : string|array
 	{
 		//$jsonPayload="";
 		libxml_use_internal_errors(true);	// Throw exception in case of parsing errors.
@@ -131,14 +129,17 @@ class OrderXML2JSON
 			if( array_key_exists('OrderXml', $array) && is_array($array['OrderXml']) && sizeof($array['OrderXml'])===1 && array_key_exists('Order', $array['OrderXml']) )
 			{	$array=$array['OrderXml']; }
 			
-			
-		//	error_log(print_r($array, true));
+		//	
 			$domain="http://localhost/";
-			$storeExternalId=$array['Order']['Store'][$defaults['attributePrefix'].'externalId'];
-			if(array_key_exists($storeExternalId, $configArray['domains']))
-			{	$domain=$configArray['domains'][$storeExternalId];	}
+			if( array_key_exists('baseURL', $uStoreConfigArray) )
+			{
+				$domain=$uStoreConfigArray['baseURL'].str_ends_with($uStoreConfigArray['baseURL'], '/') ? '' : '/';
+			}
+			//$storeExternalId=$array['Order']['Store'][$defaults['attributePrefix'].'externalId'];
+			//if(array_key_exists($storeExternalId, $configArray['domains']))
+			//{	$domain=$configArray['domains'][$storeExternalId];	}
 			
-			Logger::fine("StoreExternalId: {$storeExternalId}, domain: {$domain}");
+			//Logger::fine("StoreExternalId: {$storeExternalId}, domain: {$domain}");
 			if(array_key_exists('id', $array['Order']['OrderProducts']['OrderProduct']))	// It only a single order product in the order, nest it in an array for same presentation or order with multiple products !
 			{
 				Logger::fine("Converting OrderProduct from object to array (only 1 OrderProduct in the order)");
@@ -155,15 +156,8 @@ class OrderXML2JSON
 				Logger::fine("Added download URL: {$downloadURL}");
 			}
 			return $returnAsArray ? $array : json_encode($array);
-		//	$jsonPayload=json_encode($array);
-		//	error_log($jsonPayload);
-		//	exit;
 		}
 		else
 		{	throw new ApplicationException("Invalid XML file, failed to convert {$xmlFile} to XML!");	}
-		//return $jsonPayload;	
 	}
-	
-
 }
-?>

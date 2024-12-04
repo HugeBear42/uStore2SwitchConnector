@@ -97,10 +97,10 @@ foreach($resultArray as $request)
 	else if($action==='statusUpdate')
 	{
 		$orderId=$request->orderId;
-		$status=$request->status;
+		$status=strtolower( $request->status );	// ignore upper / lowercase in status string.
 		$trackingId=$request->trackingId ?? '';
 		$message=$request->message ?? '';
-		$deliveryId=OrderWrapper::updateStatus($db, $configArray['switch'], $orderId, $status, $message, $trackingId);
+		$deliveryId=OrderWrapper::updateStatus($db, $configArray['uStore'], $orderId, $status, $message, $trackingId);
 		if(strlen($str)>0)
 		{	$str.=',';	}
 		$str.='{"orderId" : '.$orderId.' , "status" : "ok" , "message" : "Order status updated to '.$status.($deliveryId===-1 ? ", uStore status might not have been updated, please check the logs!" : "").'"}';
